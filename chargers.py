@@ -1,5 +1,11 @@
 import streamlit as st
-from database import SessionLocal, ChargerDB, DispenserDB
+from database import (
+    SessionLocal,
+    ChargerDB,
+    DispenserDB,
+    TransformerDB,
+    CableDB
+)
 
 
 def charger_data_page():
