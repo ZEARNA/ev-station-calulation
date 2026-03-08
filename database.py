@@ -98,3 +98,24 @@ class DispenserDB(Base):
 def init_db():
 
     Base.metadata.create_all(engine)
+
+    db = SessionLocal()
+
+    admin = db.query(UserDB).filter(UserDB.username == "admin").first()
+
+    if not admin:
+
+        import hashlib
+
+        password = hashlib.sha256("admin".encode()).hexdigest()
+
+        admin_user = UserDB(
+            username="admin",
+            password=admin,
+            role="admin"
+        )
+
+        db.add(admin_user)
+        db.commit()
+
+    db.close()
