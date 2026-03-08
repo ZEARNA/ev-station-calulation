@@ -21,6 +21,10 @@ def main():
         st.session_state.clear()
         st.rerun()
 
+    # ======================
+    # MENU
+    # ======================
+
     if st.session_state.role == "admin":
 
         st.sidebar.markdown("### Admin Menu")
@@ -44,8 +48,13 @@ def main():
         if st.sidebar.button("Database"):
             st.session_state.page = "database"
 
+    # default page
     if "page" not in st.session_state:
         st.session_state.page = "roi"
+
+    # ======================
+    # PAGE ROUTER
+    # ======================
 
     if st.session_state.page == "roi":
         user_dashboard()
@@ -57,4 +66,5 @@ def main():
         admin_panel()
 
 
-main()
+if __name__ == "__main__":
+    main()
