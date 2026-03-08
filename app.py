@@ -1,5 +1,5 @@
 """
-EV Charging ROI Dashboard / SaaS‑Ready Engine (Dependency‑Safe Version)
+EV Station Calculation (ev-station-calulation) Dashboard / SaaS‑Ready Engine (Dependency‑Safe Version)
 
 This version fixes crashes in restricted environments where packages like
 FastAPI, Pydantic, SQLAlchemy, or Streamlit may NOT be installed.
@@ -331,13 +331,13 @@ def calculate_project(input_data):
 
 if FASTAPI_AVAILABLE:
 
-    api = FastAPI(title="EV Charging ROI API")
+    api = FastAPI(title="EV Station Calculation API")
 
     @api.get("/")
 
     def root():
 
-        return {"service": "EV Charging ROI API"}
+        return {"service": "EV Station Calculation API"}
 
 
     @api.post("/calculate")
@@ -354,7 +354,7 @@ if FASTAPI_AVAILABLE:
 
 def streamlit_app():
 
-    st.title("⚡ EV Charging ROI Dashboard")
+    st.title("⚡ EV Station Calculation Dashboard")
 
     charger_type = st.selectbox("Charger Type", ["Standalone", "Split"])
 
