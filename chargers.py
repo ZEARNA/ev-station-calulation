@@ -1,268 +1,147 @@
 import streamlit as st
 from database import SessionLocal, ChargerDB, DispenserDB
+from calculator import calculate_project
 
 
-def charger_data_page():
+def user_dashboard():
+
+    st.header("EV Station ROI Calculator")
 
     db = SessionLocal()
 
-    st.header("Charger Database")
+    chargers = db.query(ChargerDB).all()
 
-    tab1, tab2 = st.tabs(["Chargers", "Dispensers"])
+    charger_names = [c.name for c in chargers]
 
-    # =====================================================
-    # CHARGER DATABASE
-    # =====================================================
+    selected = st.selectbox("Charger", charger_names)
 
-    with tab1:
+    charger = next(c for c in chargers if c.name == selected)
 
-        chargers = db.query(ChargerDB).all()
+    # =============================
+    # DISPENSER SELECT
+    # =============================
 
-        col1, col2 = st.columns([8,2])
+    dispensers = db.query(DispenserDB).filter(
+        DispenserDB.charger_id == charger.id
+    ).all()
 
-        with col2:
-            if st.button("➕ Add Charger"):
-                st.session_state.add_charger = True
+    disp_options = {
+        f"{d.type} | {d.connectors} connectors": d
+        for d in dispensers
+    }
 
-        # TABLE HEADER
-        h1,h2,h3,h4,h5 = st.columns(5)
+    disp_label = st.selectbox(
+        "Select Dispenser",
+        list(disp_options.keys())
+    )
 
-        h1.write("Name")
-        h2.write("Type")
-        h3.write("Power kW")
-        h4.write("Price")
-        h5.write("Action")
+    disp = disp_options[disp_label]
 
-        st.divider()
+    disp_count = st.number_input(
+        "Number of Dispensers",
+        min_value=1,
+        value=1
+    )
 
-        for c in chargers:
+    # =============================
+    # SESSION LIST
+    # =============================
 
-            c1,c2,c3,c4,c5 = st.columns(5)
+    if "disp_list" not in st.session_state:
+        st.session_state.disp_list = []
 
-            c1.write(c.name)
-            c2.write(c.type)
-            c3.write(c.power_kw)
-            c4.write(c.price)
+    if st.button("➕ Add Dispenser"):
 
-            edit_col, del_col = c5.columns(2)
+        st.session_state.disp_list.append({
+            "type": disp.type,
+            "connectors": disp.connectors,
+            "count": disp_count
+        })
 
-            if edit_col.button("Edit", key=f"edit_c_{c.id}"):
+    # =============================
+    # SHOW DISPENSER LIST
+    # =============================
 
-                st.session_state.edit_charger = c.id
+    st.subheader("Selected Dispensers")
 
-            if del_col.button("Delete", key=f"del_c_{c.id}"):
+    total_connectors = 0
 
-                db.delete(c)
-                db.commit()
+    for i, d in enumerate(st.session_state.disp_list):
 
-                st.rerun()
+        c1, c2, c3 = st.columns([5,2,1])
 
-        # ---------------- ADD CHARGER ----------------
+        c1.write(
+            f"{d['type']} | {d['connectors']} connectors × {d['count']}"
+        )
 
-        if st.session_state.get("add_charger"):
+        connectors = d["connectors"] * d["count"]
 
-            st.subheader("Add Charger")
+        c2.write(f"{connectors} connectors")
 
-            name = st.text_input("Name", key="add_c_name")
+        if c3.button("❌", key=f"del_disp_{i}"):
 
-            ctype = st.selectbox(
-                "Type",
-                ["Standalone","Split"],
-                key="add_c_type"
-            )
+            st.session_state.disp_list.pop(i)
 
-            power = st.number_input(
-                "Power kW",
-                value=120,
-                key="add_c_power"
-            )
+            st.rerun()
 
-            price = st.number_input(
-                "Price",
-                value=500000,
-                key="add_c_price"
-            )
+        total_connectors += connectors
 
-            col1,col2 = st.columns(2)
+    st.divider()
 
-            if col1.button("Save Charger"):
+    st.write(f"Total connectors: **{total_connectors}**")
 
-                charger = ChargerDB(
-                    name=name,
-                    type=ctype,
-                    power_kw=power,
-                    price=price
-                )
+    st.write(f"Max connectors: **{charger.max_connectors}**")
 
-                db.add(charger)
-                db.commit()
+    if total_connectors > charger.max_connectors:
 
-                st.session_state.add_charger = False
+        st.error("Exceeded max connectors of power unit")
 
-                st.rerun()
+        db.close()
 
-            if col2.button("Cancel"):
+        return
 
-                st.session_state.add_charger = False
-                st.rerun()
+    # =============================
+    # ROI INPUT
+    # =============================
 
-        # ---------------- EDIT CHARGER ----------------
+    qty = st.number_input("Number of Chargers", value=2)
 
-        if "edit_charger" in st.session_state:
+    utilization = st.slider("Utilization %", 0, 100, 20) / 100
 
-            charger = db.query(ChargerDB).filter(
-                ChargerDB.id == st.session_state.edit_charger
-            ).first()
+    charge_price = st.number_input("Charging Price", value=8.0)
 
-            st.subheader("Edit Charger")
+    electricity_cost = st.number_input("Electricity Cost", value=4.0)
 
-            name = st.text_input(
-                "Name",
-                value=charger.name,
-                key="edit_c_name"
-            )
+    # =============================
+    # CALCULATE
+    # =============================
 
-            ctype = st.selectbox(
-                "Type",
-                ["Standalone","Split"],
-                index=0 if charger.type=="Standalone" else 1,
-                key="edit_c_type"
-            )
+    if st.button("Calculate ROI"):
 
-            power = st.number_input(
-                "Power kW",
-                value=charger.power_kw,
-                key="edit_c_power"
-            )
+        if total_connectors == 0:
 
-            price = st.number_input(
-                "Price",
-                value=charger.price,
-                key="edit_c_price"
-            )
+            st.error("Please add at least one dispenser")
 
-            col1,col2 = st.columns(2)
+            return
 
-            if col1.button("Update Charger"):
+        power_per_connector = charger.power_kw / total_connectors
 
-                charger.name = name
-                charger.type = ctype
-                charger.power_kw = power
-                charger.price = price
+        cost, profit, roi = calculate_project(
+            charger.power_kw,
+            charger.price,
+            qty,
+            utilization,
+            charge_price,
+            electricity_cost,
+        )
 
-                db.commit()
+        st.metric("Project Cost", f"{cost:,.0f} THB")
 
-                del st.session_state.edit_charger
+        st.metric("Annual Profit", f"{profit:,.0f} THB")
 
-                st.rerun()
+        st.metric("Power per connector", f"{power_per_connector:.1f} kW")
 
-            if col2.button("Cancel Edit"):
-
-                del st.session_state.edit_charger
-                st.rerun()
-
-    # =====================================================
-    # DISPENSER DATABASE
-    # =====================================================
-
-    with tab2:
-
-        dispensers = db.query(DispenserDB).all()
-        chargers = db.query(ChargerDB).all()
-
-        charger_names = {c.id: c.name for c in chargers}
-
-        col1,col2 = st.columns([8,2])
-
-        with col2:
-            if st.button("➕ Add Dispenser"):
-                st.session_state.add_disp = True
-
-        # TABLE HEADER
-        h1,h2,h3,h4,h5 = st.columns(5)
-
-        h1.write("Charger")
-        h2.write("Type")
-        h3.write("Connectors")
-        h4.write("Amp")
-        h5.write("Action")
-
-        st.divider()
-
-        for d in dispensers:
-
-            c1,c2,c3,c4,c5 = st.columns(5)
-
-            c1.write(charger_names.get(d.charger_id,"Unknown"))
-            c2.write(d.type)
-            c3.write(d.connectors)
-            c4.write(d.amp_per_connector)
-
-            edit_col, del_col = c5.columns(2)
-
-            if edit_col.button("Edit", key=f"edit_d_{d.id}"):
-
-                st.session_state.edit_disp = d.id
-
-            if del_col.button("Delete", key=f"del_d_{d.id}"):
-
-                db.delete(d)
-                db.commit()
-
-                st.rerun()
-
-        # ---------------- ADD DISPENSER ----------------
-
-        if st.session_state.get("add_disp"):
-
-            st.subheader("Add Dispenser")
-
-            charger_select = st.selectbox(
-                "Compatible Charger",
-                chargers,
-                format_func=lambda x: x.name,
-                key="add_d_charger"
-            )
-
-            d_type = st.selectbox(
-                "Type",
-                ["Liquid","Boost"],
-                key="add_d_type"
-            )
-
-            connectors = st.number_input(
-                "Connectors",
-                value=2,
-                key="add_d_conn"
-            )
-
-            amp = st.number_input(
-                "Amp per connector",
-                value=250,
-                key="add_d_amp"
-            )
-
-            col1,col2 = st.columns(2)
-
-            if col1.button("Save Dispenser"):
-
-                dis = DispenserDB(
-                    charger_id=charger_select.id,
-                    type=d_type,
-                    connectors=connectors,
-                    amp_per_connector=amp
-                )
-
-                db.add(dis)
-                db.commit()
-
-                st.session_state.add_disp = False
-
-                st.rerun()
-
-            if col2.button("Cancel"):
-
-                st.session_state.add_disp = False
-                st.rerun()
+        if roi:
+            st.metric("ROI Years", f"{roi:.2f}")
 
     db.close()
