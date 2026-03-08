@@ -23,11 +23,11 @@ class UserDB(Base):
 
     id = Column(Integer, primary_key=True)
 
-    username = Column(String)
+    username = Column(String, nullable=False)
 
-    password = Column(String)
+    password = Column(String, nullable=False)
 
-    role = Column(String)
+    role = Column(String, nullable=False)
 
 
 # =============================
@@ -40,19 +40,20 @@ class ChargerDB(Base):
 
     id = Column(Integer, primary_key=True)
 
-    name = Column(String)
+    name = Column(String, nullable=False)
 
-    type = Column(String)
+    type = Column(String, nullable=False)
 
-    power_kw = Column(Float)
+    power_kw = Column(Float, nullable=False)
 
-    price = Column(Float)
+    price = Column(Float, nullable=False)
 
-    max_connectors = Column(Integer)
+    max_connectors = Column(Integer, nullable=False)
 
     dispensers = relationship(
         "DispenserDB",
-        back_populates="charger"
+        back_populates="charger",
+        cascade="all, delete-orphan"
     )
 
 
@@ -60,6 +61,37 @@ class ChargerDB(Base):
 # DISPENSER TABLE
 # =============================
 
+class DispenserDB(Base):
+
+    __tablename__ = "dispensers"
+
+    id = Column(Integer, primary_key=True)
+
+    charger_id = Column(
+        Integer,
+        ForeignKey("chargers.id"),
+        nullable=False
+    )
+
+    type = Column(String, nullable=False)
+
+    connectors = Column(Integer, nullable=False)
+
+    amp_per_connector = Column(Float, nullable=False)
+
+    charger = relationship(
+        "ChargerDB",
+        back_populates="dispensers"
+    )
+
+
+# =============================
+# INIT DATABASE
+# =============================
+
+def init_db():
+
+    Base.metadata.create_all(engine)
 class DispenserDB(Base):
 
     __tablename__ = "dispensers"
