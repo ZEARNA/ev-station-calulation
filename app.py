@@ -6,27 +6,37 @@ from admin import admin_panel
 from chargers import charger_data_page
 from database import init_db
 
-init_db()
-from database import init_db
+
+# =========================
+# INITIALIZE DATABASE
+# =========================
 
 init_db()
+
 
 def main():
+
+    # =========================
+    # LOGIN CHECK
+    # =========================
 
     if "user" not in st.session_state:
         login_screen()
         return
 
+    # =========================
+    # SIDEBAR USER INFO
+    # =========================
+
     st.sidebar.write(f"User: {st.session_state.user}")
 
     if st.sidebar.button("Logout"):
-        del st.session_state.user
-        del st.session_state.role
+        st.session_state.clear()
         st.rerun()
 
-    # =====================
-    # ADMIN MENU (BUTTON)
-    # =====================
+    # =========================
+    # SIDEBAR MENU
+    # =========================
 
     if st.session_state.role == "admin":
 
@@ -41,10 +51,6 @@ def main():
         if st.sidebar.button("Admin Management"):
             st.session_state.page = "admin"
 
-    # =====================
-    # USER MENU
-    # =====================
-
     else:
 
         st.sidebar.markdown("### User Menu")
@@ -55,8 +61,16 @@ def main():
         if st.sidebar.button("Charger Database"):
             st.session_state.page = "chargers"
 
+    # =========================
+    # DEFAULT PAGE
+    # =========================
+
     if "page" not in st.session_state:
         st.session_state.page = "roi"
+
+    # =========================
+    # PAGE ROUTER
+    # =========================
 
     if st.session_state.page == "roi":
         user_dashboard()
@@ -68,4 +82,9 @@ def main():
         admin_panel()
 
 
-main()
+# =========================
+# RUN APP
+# =========================
+
+if __name__ == "__main__":
+    main()
