@@ -14,13 +14,21 @@ def main():
         login_screen()
         return
 
-    st.sidebar.write(st.session_state.user)
+    st.sidebar.write(f"User: {st.session_state.user}")
+
+    if st.sidebar.button("Logout"):
+        del st.session_state.user
+        del st.session_state.role
+        st.rerun()
 
     if st.session_state.role == "admin":
 
-        page = st.sidebar.selectbox("Menu", ["Dashboard", "Admin"])
+        page = st.sidebar.radio(
+            "Admin Menu",
+            ["ROI Calculator", "Admin Management"],
+        )
 
-        if page == "Admin":
+        if page == "Admin Management":
             admin_panel()
         else:
             user_dashboard()
