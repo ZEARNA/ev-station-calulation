@@ -101,21 +101,27 @@ def init_db():
 
     db = SessionLocal()
 
-    admin = db.query(UserDB).filter(UserDB.username == "admin").first()
+    try:
 
-    if not admin:
+        admin = db.query(UserDB).filter(UserDB.username == "admin").first()
 
-        import hashlib
+        if admin is None:
 
-        password = hashlib.sha256("admin".encode()).hexdigest()
+            import hashlib
 
-        admin_user = UserDB(
-            username="admin",
-            password=admin,
-            role="admin"
-        )
+            password = hashlib.sha256("admin".encode()).hexdigest()
 
-        db.add(admin_user)
-        db.commit()
+            admin_user = UserDB(
+                username="admin",
+                password=password,
+                role="admin"
+            )
 
-    db.close()
+            db.add(admin_user)
+            db.commit()
+
+    except Exception:
+        db.rollback()
+
+    finally:
+        db.close()
