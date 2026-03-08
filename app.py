@@ -7,7 +7,9 @@ from chargers import charger_data_page
 from database import init_db
 
 init_db()
+from database import init_db
 
+init_db()
 
 def main():
 
