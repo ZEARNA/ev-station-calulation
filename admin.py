@@ -5,7 +5,7 @@ from auth import hash_password
 
 def admin_panel():
 
-    st.header("Admin Panel")
+    st.header("Admin Management")
 
     db = SessionLocal()
 
@@ -13,15 +13,15 @@ def admin_panel():
 
     with tab1:
 
-        u = st.text_input("Username")
-        p = st.text_input("Password")
+        username = st.text_input("Username")
+        password = st.text_input("Password")
         role = st.selectbox("Role", ["user", "admin"])
 
         if st.button("Create User"):
 
             user = UserDB(
-                username=u,
-                password=hash_password(p),
+                username=username,
+                password=hash_password(password),
                 role=role,
             )
 
@@ -32,9 +32,24 @@ def admin_panel():
 
     with tab2:
 
-        name = st.text_input("Name")
-
+        name = st.text_input("Charger Name")
         power = st.number_input("Power kW")
+        price = st.number_input("Price")
+
+        if st.button("Create Charger"):
+
+            charger = ChargerDB(
+                name=name,
+                power_kw=power,
+                price=price,
+            )
+
+            db.add(charger)
+            db.commit()
+
+            st.success("Charger created")
+
+    db.close()        power = st.number_input("Power kW")
 
         price = st.number_input("Price")
 
