@@ -27,12 +27,15 @@ try:
 except ModuleNotFoundError:
     STREAMLIT_AVAILABLE = False
 
+# SQLAlchemy is optional but required for login/database
+SessionLocal = None
 try:
     from sqlalchemy import create_engine, Column, Integer, Float, String
     from sqlalchemy.orm import declarative_base, sessionmaker
     SQLALCHEMY_AVAILABLE = True
 except ModuleNotFoundError:
     SQLALCHEMY_AVAILABLE = False
+    SessionLocal = None
 
 
 # =================================================
@@ -131,6 +134,11 @@ def calculate_project(power, price, qty, utilization, charge_price, electricity_
 
 
 def login_screen():
+
+    # If database not available show clear message instead of crashing
+    if SessionLocal is None:
+        st.error("Database not initialized. Add 'sqlalchemy' to requirements.txt then redeploy the app.")
+        st.stop()
 
     st.title("EV Station Calculation Login")
 
