@@ -8,7 +8,7 @@ def charger_data_page():
 
     st.header("Infrastructure Database")
 
-    tab1, tab2 = st.tabs(["Chargers", "Dispensers"])
+    tab1, tab2, tab3, tab4 = st.tabs(["Chargers", "Dispensers", "Transformers", "Cables"])
 
     # =====================================================
     # CHARGER DATABASE
