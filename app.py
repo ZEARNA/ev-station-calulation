@@ -58,8 +58,8 @@ def main():
         if st.sidebar.button("ROI Calculator"):
             st.session_state.page = "roi"
 
-        if st.sidebar.button("Charger Database"):
-            st.session_state.page = "chargers"
+        if st.sidebar.button("Database"):
+            st.session_state.page = "database"
 
     # =========================
     # DEFAULT PAGE
