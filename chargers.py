@@ -1,13 +1,18 @@
-import streamlit as st
-from database import SessionLocal, ChargerDB
+def calculate_project(power, price, qty, utilization, charge_price, electricity_cost):
 
+    energy_day = power * qty * utilization * 24
 
-def list_chargers():
+    revenue_day = energy_day * charge_price
 
-    db = SessionLocal()
+    electricity_day = energy_day * electricity_cost
 
-    chargers = db.query(ChargerDB).all()
+    annual_profit = (revenue_day - electricity_day) * 365
 
-    db.close()
+    project_cost = price * qty
 
-    return chargers
+    roi = None
+
+    if annual_profit > 0:
+        roi = project_cost / annual_profit
+
+    return project_cost, annual_profit, roi
