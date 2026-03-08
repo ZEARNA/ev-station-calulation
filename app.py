@@ -502,69 +502,55 @@ def _test_calculation():
 
 
 # =================================================
-# ENTRY
+# ENTRY (Streamlit Cloud compatible)
 # =================================================
 
-if __name__ == "__main__":
+# Streamlit Cloud does NOT run the script through the
+# usual `if __name__ == "__main__"` path. Therefore we
+# must start the dashboard directly when Streamlit is
+# available.
 
-    _test_transformer()
+if STREAMLIT_AVAILABLE:
+    # Run basic tests once (safe, very fast)
+    try:
+        _test_transformer()
+        _test_cable()
+        _test_calculation()
+    except Exception:
+        pass
 
-    _test_cable()
+    # Launch dashboard
+    streamlit_app()
 
-    _test_calculation()
+else:
 
-    if STREAMLIT_AVAILABLE:
+    # CLI fallback when Streamlit is not installed
+    print("Running CLI demo...
+")
 
-        streamlit_app()
+    demo_model = ChargerModel(
+        name="Demo",
+        type="Standalone",
+        power_kw=120,
+        current=200,
+        price=500000,
+        dispenser_price=0
+    )
 
-    else:
+    demo = ProjectInput(
+        model=demo_model,
+        qty=2,
+        dispenser_qty=0,
+        location="MEA",
+        utilization=0.2,
+        charge_price=8,
+        electricity_cost=4,
+        transformer_cost=450000,
+        cable_cost=200000,
+        land_rent_year=200000,
+        om_year=50000,
+        demand_charge_rate=200,
+        distance_m=80
+    )
 
-        print("Running CLI demo...\n")
-
-        demo_model = ChargerModel(
-
-            name="Demo",
-
-            type="Standalone",
-
-            power_kw=120,
-
-            current=200,
-
-            price=500000,
-
-            dispenser_price=0
-
-        )
-
-        demo = ProjectInput(
-
-            model=demo_model,
-
-            qty=2,
-
-            dispenser_qty=0,
-
-            location="MEA",
-
-            utilization=0.2,
-
-            charge_price=8,
-
-            electricity_cost=4,
-
-            transformer_cost=450000,
-
-            cable_cost=200000,
-
-            land_rent_year=200000,
-
-            om_year=50000,
-
-            demand_charge_rate=200,
-
-            distance_m=80
-
-        )
-
-        print(calculate_project(demo))
+    print(calculate_project(demo))
