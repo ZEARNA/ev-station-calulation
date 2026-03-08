@@ -1,167 +1,169 @@
 import streamlit as st
-from database import SessionLocal, ChargerDB, DispenserDB
-from calculator import calculate_project
+from database import SessionLocal, ChargerDB, TransformerDB, CableDB
 
 
 def user_dashboard():
 
-    st.header("EV Station ROI Calculator")
+    st.header("Infrastructure Database")
 
     db = SessionLocal()
 
-    chargers = db.query(ChargerDB).all()
-
-    if len(chargers) == 0:
-        st.warning("No chargers in database")
-        db.close()
-        return
-
-    # =============================
-    # SELECT CHARGER
-    # =============================
-
-    charger_names = [c.name for c in chargers]
-
-    selected = st.selectbox("Select Charger", charger_names)
-
-    charger = next(c for c in chargers if c.name == selected)
-
-    st.divider()
-
-    # =============================
-    # DISPENSER SELECT
-    # =============================
-
-    dispensers = db.query(DispenserDB).filter(
-        DispenserDB.charger_id == charger.id
-    ).all()
-
-    if len(dispensers) == 0:
-        st.warning("No dispenser available for this charger")
-        db.close()
-        return
-
-    disp_options = {
-        f"{d.type} | {d.connectors} connectors": d
-        for d in dispensers
-    }
-
-    disp_label = st.selectbox(
-        "Select Dispenser",
-        list(disp_options.keys())
+    tab1, tab2, tab3 = st.tabs(
+        ["Chargers", "Transformers", "Cables"]
     )
 
-    disp = disp_options[disp_label]
+    # ==========================
+    # TRANSFORMER DATABASE
+    # ==========================
 
-    disp_count = st.number_input(
-        "Number of Dispensers",
-        min_value=1,
-        value=1
-    )
+    with tab2:
 
-    # =============================
-    # SESSION LIST
-    # =============================
+        st.subheader("Transformer Database")
 
-    if "disp_list" not in st.session_state:
-        st.session_state.disp_list = []
+        transformers = db.query(TransformerDB).all()
 
-    if st.button("➕ Add Dispenser"):
+        c1, c2 = st.columns([8, 2])
 
-        st.session_state.disp_list.append({
-            "type": disp.type,
-            "connectors": disp.connectors,
-            "count": disp_count
-        })
+        with c2:
+            if st.button("➕ Add Transformer"):
+                st.session_state.add_transformer = True
 
-        st.rerun()
+        h1, h2, h3, h4 = st.columns(4)
 
-    # =============================
-    # SHOW DISPENSER LIST
-    # =============================
+        h1.write("Brand")
+        h2.write("kVA")
+        h3.write("Price")
+        h4.write("Action")
 
-    st.subheader("Selected Dispensers")
+        st.divider()
 
-    total_connectors = 0
+        for t in transformers:
 
-    for i, d in enumerate(st.session_state.disp_list):
+            c1, c2, c3, c4 = st.columns(4)
 
-        c1, c2, c3 = st.columns([5,2,1])
+            c1.write(t.brand)
+            c2.write(t.kva)
+            c3.write(t.price)
 
-        c1.write(
-            f"{d['type']} | {d['connectors']} connectors × {d['count']}"
-        )
+            edit_col, del_col = c4.columns(2)
 
-        connectors = d["connectors"] * d["count"]
+            if edit_col.button("Edit", key=f"edit_t_{t.id}"):
+                st.session_state.edit_transformer = t.id
 
-        c2.write(f"{connectors} connectors")
+            if del_col.button("Delete", key=f"del_t_{t.id}"):
 
-        if c3.button("❌", key=f"del_disp_{i}"):
+                db.delete(t)
+                db.commit()
+                st.rerun()
 
-            st.session_state.disp_list.pop(i)
+        # ADD TRANSFORMER
 
-            st.rerun()
+        if st.session_state.get("add_transformer"):
 
-        total_connectors += connectors
+            st.subheader("Add Transformer")
 
-    st.divider()
+            brand = st.text_input("Brand")
 
-    st.write(f"Total connectors: **{total_connectors}**")
+            kva = st.number_input("kVA", value=1000)
 
-    st.write(f"Max connectors per power unit: **{charger.max_connectors}**")
+            price = st.number_input("Price", value=500000)
 
-    if total_connectors > charger.max_connectors:
+            col1, col2 = st.columns(2)
 
-        st.error("Exceeded max connectors of power unit")
+            if col1.button("Save Transformer"):
 
-        db.close()
-        return
+                transformer = TransformerDB(
+                    brand=brand,
+                    kva=kva,
+                    price=price
+                )
 
-    st.divider()
+                db.add(transformer)
+                db.commit()
 
-    # =============================
-    # ROI INPUT
-    # =============================
+                st.session_state.add_transformer = False
+                st.rerun()
 
-    qty = st.number_input("Number of Chargers", value=2)
+            if col2.button("Cancel"):
+                st.session_state.add_transformer = False
+                st.rerun()
 
-    utilization = st.slider("Utilization %", 0, 100, 20) / 100
+    # ==========================
+    # CABLE DATABASE
+    # ==========================
 
-    charge_price = st.number_input("Charging Price (THB/kWh)", value=8.0)
+    with tab3:
 
-    electricity_cost = st.number_input("Electricity Cost (THB/kWh)", value=4.0)
+        st.subheader("Cable Database")
 
-    # =============================
-    # CALCULATE ROI
-    # =============================
+        cables = db.query(CableDB).all()
 
-    if st.button("Calculate ROI"):
+        c1, c2 = st.columns([8, 2])
 
-        if total_connectors == 0:
+        with c2:
+            if st.button("➕ Add Cable"):
+                st.session_state.add_cable = True
 
-            st.error("Please add at least one dispenser")
+        h1, h2, h3, h4 = st.columns(4)
 
-            db.close()
-            return
+        h1.write("Type")
+        h2.write("Size")
+        h3.write("Price / meter")
+        h4.write("Action")
 
-        power_per_connector = charger.power_kw / total_connectors
+        st.divider()
 
-        cost, profit, roi = calculate_project(
-            charger.power_kw,
-            charger.price,
-            qty,
-            utilization,
-            charge_price,
-            electricity_cost,
-        )
+        for c in cables:
 
-        st.metric("Project Cost", f"{cost:,.0f} THB")
+            c1, c2, c3, c4 = st.columns(4)
 
-        st.metric("Annual Profit", f"{profit:,.0f} THB")
+            c1.write(c.type)
+            c2.write(c.size)
+            c3.write(c.price_per_meter)
 
-        st.metric("Power per Connector", f"{power_per_connector:.1f} kW")
+            edit_col, del_col = c4.columns(2)
 
-        if roi:
-            st.metric("ROI Years", f"{roi:.2f}")
+            if edit_col.button("Edit", key=f"edit_c_{c.id}"):
+                st.session_state.edit_cable = c.id
+
+            if del_col.button("Delete", key=f"del_c_{c.id}"):
+
+                db.delete(c)
+                db.commit()
+
+                st.rerun()
+
+        # ADD CABLE
+
+        if st.session_state.get("add_cable"):
+
+            st.subheader("Add Cable")
+
+            cable_type = st.text_input("Type")
+
+            size = st.number_input("Size (mm²)", value=50)
+
+            price = st.number_input("Price per meter", value=200)
+
+            col1, col2 = st.columns(2)
+
+            if col1.button("Save Cable"):
+
+                cable = CableDB(
+                    type=cable_type,
+                    size=size,
+                    price_per_meter=price
+                )
+
+                db.add(cable)
+                db.commit()
+
+                st.session_state.add_cable = False
+                st.rerun()
+
+            if col2.button("Cancel"):
+
+                st.session_state.add_cable = False
+                st.rerun()
 
     db.close()
