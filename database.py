@@ -1,10 +1,6 @@
 from sqlalchemy import create_engine, Column, Integer, Float, String, ForeignKey
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
-import os
-
-# ==========================
-# DATABASE CONFIG
-# ==========================
+import hashlib
 
 DATABASE_URL = "sqlite:///ev_saas.db"
 
@@ -28,11 +24,11 @@ class UserDB(Base):
 
     id = Column(Integer, primary_key=True)
 
-    username = Column(String, nullable=False)
+    username = Column(String, unique=True)
 
-    password = Column(String, nullable=False)
+    password = Column(String)
 
-    role = Column(String, nullable=False)
+    role = Column(String)
 
 
 # ==========================
@@ -45,16 +41,15 @@ class ChargerDB(Base):
 
     id = Column(Integer, primary_key=True)
 
-    name = Column(String, nullable=False)
+    name = Column(String)
 
-    type = Column(String, nullable=False)
+    type = Column(String)
 
-    power_kw = Column(Float, nullable=False)
+    power_kw = Column(Float)
 
-    price = Column(Float, nullable=False)
+    price = Column(Float)
 
-    # max connectors allowed for split charger
-    max_connectors = Column(Integer, nullable=False)
+    max_connectors = Column(Integer)
 
     dispensers = relationship(
         "DispenserDB",
@@ -75,15 +70,14 @@ class DispenserDB(Base):
 
     charger_id = Column(
         Integer,
-        ForeignKey("chargers.id"),
-        nullable=False
+        ForeignKey("chargers.id")
     )
 
-    type = Column(String, nullable=False)
+    type = Column(String)
 
-    connectors = Column(Integer, nullable=False)
+    connectors = Column(Integer)
 
-    amp_per_connector = Column(Float, nullable=False)
+    amp_per_connector = Column(Float)
 
     charger = relationship(
         "ChargerDB",
@@ -92,7 +86,40 @@ class DispenserDB(Base):
 
 
 # ==========================
-# INITIALIZE DATABASE
+# TRANSFORMER TABLE
+# ==========================
+
+class TransformerDB(Base):
+
+    __tablename__ = "transformers"
+
+    id = Column(Integer, primary_key=True)
+
+    brand = Column(String)
+
+    kva = Column(Float)
+
+    price = Column(Float)
+
+
+# ==========================
+# CABLE TABLE
+# ==========================
+
+class CableDB(Base):
+
+    __tablename__ = "cables"
+
+    id = Column(Integer, primary_key=True)
+
+    type = Column(String)
+
+    size = Column(Float)
+
+    price_per_meter = Column(Float)
+
+# ==========================
+# INIT DATABASE
 # ==========================
 
 def init_db():
@@ -101,27 +128,19 @@ def init_db():
 
     db = SessionLocal()
 
-    try:
+    admin = db.query(UserDB).filter(UserDB.username == "admin").first()
 
-        admin = db.query(UserDB).filter(UserDB.username == "admin").first()
+    if not admin:
 
-        if admin is None:
+        password = hashlib.sha256("admin".encode()).hexdigest()
 
-            import hashlib
+        admin_user = UserDB(
+            username="admin",
+            password=password,
+            role="admin"
+        )
 
-            password = hashlib.sha256("admin".encode()).hexdigest()
+        db.add(admin_user)
+        db.commit()
 
-            admin_user = UserDB(
-                username="admin",
-                password=password,
-                role="admin"
-            )
-
-            db.add(admin_user)
-            db.commit()
-
-    except Exception:
-        db.rollback()
-
-    finally:
-        db.close()
+    db.close()
