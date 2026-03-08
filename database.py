@@ -13,9 +13,9 @@ SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
 
 
-# =============================
+# ==========================
 # USER TABLE
-# =============================
+# ==========================
 
 class UserDB(Base):
 
@@ -23,16 +23,16 @@ class UserDB(Base):
 
     id = Column(Integer, primary_key=True)
 
-    username = Column(String, nullable=False)
+    username = Column(String)
 
-    password = Column(String, nullable=False)
+    password = Column(String)
 
-    role = Column(String, nullable=False)
+    role = Column(String)
 
 
-# =============================
+# ==========================
 # CHARGER TABLE
-# =============================
+# ==========================
 
 class ChargerDB(Base):
 
@@ -40,26 +40,26 @@ class ChargerDB(Base):
 
     id = Column(Integer, primary_key=True)
 
-    name = Column(String, nullable=False)
+    name = Column(String)
 
-    type = Column(String, nullable=False)
+    type = Column(String)
 
-    power_kw = Column(Float, nullable=False)
+    power_kw = Column(Float)
 
-    price = Column(Float, nullable=False)
+    price = Column(Float)
 
-    max_connectors = Column(Integer, nullable=False)
+    max_connectors = Column(Integer)
 
     dispensers = relationship(
         "DispenserDB",
         back_populates="charger",
-        cascade="all, delete-orphan"
+        cascade="all, delete"
     )
 
 
-# =============================
+# ==========================
 # DISPENSER TABLE
-# =============================
+# ==========================
 
 class DispenserDB(Base):
 
@@ -69,36 +69,8 @@ class DispenserDB(Base):
 
     charger_id = Column(
         Integer,
-        ForeignKey("chargers.id"),
-        nullable=False
+        ForeignKey("chargers.id")
     )
-
-    type = Column(String, nullable=False)
-
-    connectors = Column(Integer, nullable=False)
-
-    amp_per_connector = Column(Float, nullable=False)
-
-    charger = relationship(
-        "ChargerDB",
-        back_populates="dispensers"
-    )
-
-
-# =============================
-# INIT DATABASE
-# =============================
-
-def init_db():
-
-    Base.metadata.create_all(engine)
-class DispenserDB(Base):
-
-    __tablename__ = "dispensers"
-
-    id = Column(Integer, primary_key=True)
-
-    charger_id = Column(Integer, ForeignKey("chargers.id"))
 
     type = Column(String)
 
@@ -112,9 +84,9 @@ class DispenserDB(Base):
     )
 
 
-# =============================
+# ==========================
 # INIT DATABASE
-# =============================
+# ==========================
 
 def init_db():
 
