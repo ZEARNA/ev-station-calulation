@@ -75,8 +75,8 @@ def main():
     if st.session_state.page == "roi":
         user_dashboard()
 
-    elif st.session_state.page == "chargers":
-        charger_data_page()
+    elif st.session_state.page == "database":
+    charger_data_page()
 
     elif st.session_state.page == "admin":
         admin_panel()
