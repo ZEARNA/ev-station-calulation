@@ -21,14 +21,13 @@ class ChargerDB(Base):
     __tablename__ = "chargers"
 
     id = Column(Integer, primary_key=True)
-
     name = Column(String)
     type = Column(String)
 
     power_kw = Column(Float)
     price = Column(Float)
 
-    dispensers = relationship("DispenserDB", back_populates="charger")
+    max_connectors = Column(Integer)
 
 
 class DispenserDB(Base):
