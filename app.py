@@ -1,35 +1,33 @@
-from sqlalchemy import create_engine, Column, Integer, Float, String
-from sqlalchemy.orm import declarative_base, sessionmaker
+import streamlit as st
 
-DATABASE_URL = "sqlite:///ev_saas.db"
+from database import init_db
+from auth import login_screen
+from admin import admin_panel
+from dashboard import user_dashboard
 
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
-
-SessionLocal = sessionmaker(bind=engine)
-
-Base = declarative_base()
+init_db()
 
 
-class UserDB(Base):
-    __tablename__ = "users"
+def main():
 
-    id = Column(Integer, primary_key=True)
-    username = Column(String)
-    password = Column(String)
-    role = Column(String)
+    if "user" not in st.session_state:
+        login_screen()
+        return
+
+    st.sidebar.write(st.session_state.user)
+
+    if st.session_state.role == "admin":
+
+        page = st.sidebar.selectbox("Menu", ["Dashboard", "Admin"])
+
+        if page == "Admin":
+            admin_panel()
+        else:
+            user_dashboard()
+
+    else:
+
+        user_dashboard()
 
 
-class ChargerDB(Base):
-    __tablename__ = "chargers"
-
-    id = Column(Integer, primary_key=True)
-    name = Column(String)
-    type = Column(String)
-    power_kw = Column(Float)
-    current = Column(Float)
-    price = Column(Float)
-    dispenser_price = Column(Float)
-
-
-def init_db():
-    Base.metadata.create_all(engine)
+main()
