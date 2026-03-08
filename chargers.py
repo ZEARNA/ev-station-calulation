@@ -1,46 +1,68 @@
 import streamlit as st
-import pandas as pd
 from database import SessionLocal, ChargerDB
 
 
 def charger_data_page():
 
-    db = SessionLocal()
-
     st.header("Charger Database")
+
+    db = SessionLocal()
 
     chargers = db.query(ChargerDB).all()
 
-    # ---------------------
+    # --------------------
     # ADD BUTTON
-    # ---------------------
+    # --------------------
 
     col1, col2 = st.columns([8,2])
 
     with col2:
         if st.button("➕ Add Charger"):
-            st.session_state.page_mode = "add"
+            st.session_state.mode = "add"
             st.rerun()
 
-    # ---------------------
-    # LIST CHARGERS
-    # ---------------------
+    # --------------------
+    # TABLE HEADER
+    # --------------------
 
-    st.subheader("Chargers")
+    h1, h2, h3, h4, h5, h6, h7 = st.columns(7)
+
+    h1.write("Name")
+    h2.write("Type")
+    h3.write("Power kW")
+    h4.write("Current A")
+    h5.write("Price")
+    h6.write("Dispenser")
+    h7.write("Action")
+
+    st.divider()
+
+    # --------------------
+    # TABLE ROWS
+    # --------------------
 
     for c in chargers:
 
-        if st.button(f"{c.name} | {c.power_kw} kW", key=f"charger_{c.id}"):
+        c1, c2, c3, c4, c5, c6, c7 = st.columns(7)
+
+        c1.write(c.name)
+        c2.write(c.type)
+        c3.write(c.power_kw)
+        c4.write(c.current)
+        c5.write(c.price)
+        c6.write(c.dispenser_price)
+
+        if c7.button("Edit", key=f"edit_{c.id}"):
 
             st.session_state.selected_charger = c.id
-            st.session_state.page_mode = "edit"
+            st.session_state.mode = "edit"
             st.rerun()
 
-    # ---------------------
-    # ADD CHARGER PAGE
-    # ---------------------
+    # --------------------
+    # ADD CHARGER
+    # --------------------
 
-    if st.session_state.get("page_mode") == "add":
+    if st.session_state.get("mode") == "add":
 
         st.divider()
         st.subheader("Add Charger")
@@ -68,14 +90,14 @@ def charger_data_page():
 
             st.success("Charger added")
 
-            st.session_state.page_mode = None
+            st.session_state.mode = None
             st.rerun()
 
-    # ---------------------
-    # EDIT CHARGER PAGE
-    # ---------------------
+    # --------------------
+    # EDIT CHARGER
+    # --------------------
 
-    if st.session_state.get("page_mode") == "edit":
+    if st.session_state.get("mode") == "edit":
 
         charger = db.query(ChargerDB).filter(
             ChargerDB.id == st.session_state.selected_charger
@@ -90,6 +112,7 @@ def charger_data_page():
             ["Standalone", "Split"],
             index=0 if charger.type == "Standalone" else 1,
         )
+
         power = st.number_input("Power kW", value=charger.power_kw)
         current = st.number_input("Current A", value=charger.current)
         price = st.number_input("Price", value=charger.price)
@@ -101,7 +124,7 @@ def charger_data_page():
 
         with col1:
 
-            if st.button("💾 Update Charger"):
+            if st.button("Update Charger"):
 
                 charger.name = name
                 charger.type = ctype
@@ -114,19 +137,19 @@ def charger_data_page():
 
                 st.success("Updated")
 
-                st.session_state.page_mode = None
+                st.session_state.mode = None
                 st.rerun()
 
         with col2:
 
-            if st.button("🗑 Delete Charger"):
+            if st.button("Delete Charger"):
 
                 db.delete(charger)
                 db.commit()
 
                 st.success("Deleted")
 
-                st.session_state.page_mode = None
+                st.session_state.mode = None
                 st.rerun()
 
     db.close()
