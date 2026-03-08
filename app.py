@@ -1,9 +1,10 @@
 import streamlit as st
 
-from database import init_db
 from auth import login_screen
-from admin import admin_panel
 from dashboard import user_dashboard
+from admin import admin_panel
+from chargers import charger_data_page
+from database import init_db
 
 init_db()
 
@@ -21,21 +22,48 @@ def main():
         del st.session_state.role
         st.rerun()
 
+    # =====================
+    # ADMIN MENU (BUTTON)
+    # =====================
+
     if st.session_state.role == "admin":
 
-        page = st.sidebar.radio(
-            "Admin Menu",
-            ["ROI Calculator", "Admin Management"],
-        )
+        st.sidebar.markdown("### Admin Menu")
 
-        if page == "Admin Management":
-            admin_panel()
-        else:
-            user_dashboard()
+        if st.sidebar.button("ROI Calculator"):
+            st.session_state.page = "roi"
+
+        if st.sidebar.button("Charger Database"):
+            st.session_state.page = "chargers"
+
+        if st.sidebar.button("Admin Management"):
+            st.session_state.page = "admin"
+
+    # =====================
+    # USER MENU
+    # =====================
 
     else:
 
+        st.sidebar.markdown("### User Menu")
+
+        if st.sidebar.button("ROI Calculator"):
+            st.session_state.page = "roi"
+
+        if st.sidebar.button("Charger Database"):
+            st.session_state.page = "chargers"
+
+    if "page" not in st.session_state:
+        st.session_state.page = "roi"
+
+    if st.session_state.page == "roi":
         user_dashboard()
+
+    elif st.session_state.page == "chargers":
+        charger_data_page()
+
+    elif st.session_state.page == "admin":
+        admin_panel()
 
 
 main()
