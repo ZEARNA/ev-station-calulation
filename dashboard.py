@@ -1,5 +1,5 @@
 import streamlit as st
-from database import SessionLocal, ChargerDB
+from database import SessionLocal, ChargerDB, DispenserDB
 from calculator import calculate_project
 
 
@@ -11,11 +11,24 @@ def user_dashboard():
 
     chargers = db.query(ChargerDB).all()
 
-    names = [c.name for c in chargers]
+    charger_names = [c.name for c in chargers]
 
-    selected = st.selectbox("Charger", names)
+    selected_name = st.selectbox("Select Charger", charger_names)
 
-    charger = next(c for c in chargers if c.name == selected)
+    charger = next(c for c in chargers if c.name == selected_name)
+
+    dispensers = db.query(DispenserDB).filter(
+        DispenserDB.charger_id == charger.id
+    ).all()
+
+    if dispensers:
+
+        disp_options = [
+            f"{d.type} | {d.connectors} connectors"
+            for d in dispensers
+        ]
+
+        selected_disp = st.selectbox("Select Dispenser", disp_options)
 
     qty = st.number_input("Number of Chargers", value=2)
 
