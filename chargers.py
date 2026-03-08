@@ -1,18 +1,12 @@
-def calculate_project(power, price, qty, utilization, charge_price, electricity_cost):
+from database import SessionLocal, ChargerDB
 
-    energy_day = power * qty * utilization * 24
 
-    revenue_day = energy_day * charge_price
+def get_chargers():
 
-    electricity_day = energy_day * electricity_cost
+    db = SessionLocal()
 
-    annual_profit = (revenue_day - electricity_day) * 365
+    chargers = db.query(ChargerDB).all()
 
-    project_cost = price * qty
+    db.close()
 
-    roi = None
-
-    if annual_profit > 0:
-        roi = project_cost / annual_profit
-
-    return project_cost, annual_profit, roi
+    return chargers
