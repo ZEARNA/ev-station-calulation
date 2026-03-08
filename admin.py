@@ -49,21 +49,4 @@ def admin_panel():
 
             st.success("Charger created")
 
-    db.close()        power = st.number_input("Power kW")
-
-        price = st.number_input("Price")
-
-        if st.button("Create Charger"):
-
-            c = ChargerDB(
-                name=name,
-                power_kw=power,
-                price=price,
-            )
-
-            db.add(c)
-            db.commit()
-
-            st.success("Charger created")
-
     db.close()
