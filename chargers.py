@@ -6,7 +6,7 @@ def charger_data_page():
 
     db = SessionLocal()
 
-    st.header("Charger Database")
+    st.header("Infrastructure Database")
 
     tab1, tab2 = st.tabs(["Chargers", "Dispensers"])
 
