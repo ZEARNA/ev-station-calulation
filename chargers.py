@@ -18,7 +18,7 @@ def charger_data_page():
 
         chargers = db.query(ChargerDB).all()
 
-        h1,h2,h3 = st.columns(3)
+        h1, h2, h3 = st.columns(3)
 
         h1.write("Name")
         h2.write("Type")
@@ -28,7 +28,7 @@ def charger_data_page():
 
         for c in chargers:
 
-            c1,c2,c3 = st.columns(3)
+            c1, c2, c3 = st.columns(3)
 
             c1.write(c.name)
             c2.write(c.type)
@@ -49,7 +49,7 @@ def charger_data_page():
         charger_names = {c.id: c.name for c in chargers}
 
         # TABLE HEADER
-        h1,h2,h3,h4,h5 = st.columns(5)
+        h1, h2, h3, h4, h5 = st.columns(5)
 
         h1.write("Charger")
         h2.write("Type")
@@ -61,9 +61,9 @@ def charger_data_page():
 
         for d in dispensers:
 
-            c1,c2,c3,c4,c5 = st.columns(5)
+            c1, c2, c3, c4, c5 = st.columns(5)
 
-            c1.write(charger_names.get(d.charger_id,"Unknown"))
+            c1.write(charger_names.get(d.charger_id, "Unknown"))
             c2.write(d.type)
             c3.write(d.connectors)
             c4.write(d.amp_per_connector)
@@ -83,16 +83,29 @@ def charger_data_page():
         charger_select = st.selectbox(
             "Compatible Charger",
             chargers,
-            format_func=lambda x: x.name
+            format_func=lambda x: x.name,
+            key="add_disp_charger"
         )
 
-        d_type = st.selectbox("Type", ["Liquid", "Boost"])
+        d_type = st.selectbox(
+            "Type",
+            ["Liquid", "Boost"],
+            key="add_disp_type"
+        )
 
-        connectors = st.number_input("Connectors", value=2)
+        connectors = st.number_input(
+            "Connectors",
+            value=2,
+            key="add_disp_connectors"
+        )
 
-        amp = st.number_input("Amp per connector", value=250)
+        amp = st.number_input(
+            "Amp per connector",
+            value=250,
+            key="add_disp_amp"
+        )
 
-        if st.button("Add Dispenser"):
+        if st.button("Add Dispenser", key="add_disp_btn"):
 
             dis = DispenserDB(
                 charger_id=charger_select.id,
@@ -123,25 +136,28 @@ def charger_data_page():
 
             d_type = st.selectbox(
                 "Type",
-                ["Liquid","Boost"],
-                index=0 if disp.type=="Liquid" else 1
+                ["Liquid", "Boost"],
+                index=0 if disp.type == "Liquid" else 1,
+                key=f"type_edit_{disp.id}"
             )
 
             connectors = st.number_input(
                 "Connectors",
-                value=disp.connectors
+                value=disp.connectors,
+                key=f"conn_edit_{disp.id}"
             )
 
             amp = st.number_input(
                 "Amp per connector",
-                value=disp.amp_per_connector
+                value=disp.amp_per_connector,
+                key=f"amp_edit_{disp.id}"
             )
 
-            col1,col2 = st.columns(2)
+            col1, col2 = st.columns(2)
 
             with col1:
 
-                if st.button("Update Dispenser"):
+                if st.button("Update Dispenser", key=f"update_disp_{disp.id}"):
 
                     disp.type = d_type
                     disp.connectors = connectors
@@ -156,7 +172,7 @@ def charger_data_page():
 
             with col2:
 
-                if st.button("Delete Dispenser"):
+                if st.button("Delete Dispenser", key=f"delete_disp_{disp.id}"):
 
                     db.delete(disp)
                     db.commit()
