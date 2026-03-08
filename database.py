@@ -1,5 +1,5 @@
-from sqlalchemy import create_engine, Column, Integer, Float, String
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy import create_engine, Column, Integer, Float, String, ForeignKey
+from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 
 DATABASE_URL = "sqlite:///ev_saas.db"
 
@@ -22,11 +22,25 @@ class ChargerDB(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String)
-    type = Column(String)
+    type = Column(String)  # Standalone / Split
     power_kw = Column(Float)
-    current = Column(Float)
     price = Column(Float)
-    dispenser_price = Column(Float)
+
+    dispensers = relationship("DispenserDB", back_populates="charger")
+
+
+class DispenserDB(Base):
+    __tablename__ = "dispensers"
+
+    id = Column(Integer, primary_key=True)
+
+    charger_id = Column(Integer, ForeignKey("chargers.id"))
+
+    type = Column(String)  # Liquid / Boost
+    connectors = Column(Integer)
+    amp_per_connector = Column(Float)
+
+    charger = relationship("ChargerDB", back_populates="dispensers")
 
 
 def init_db():
