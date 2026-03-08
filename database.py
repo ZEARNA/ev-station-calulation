@@ -13,10 +13,6 @@ SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
 
 
-# ==========================
-# USER TABLE
-# ==========================
-
 class UserDB(Base):
 
     __tablename__ = "users"
@@ -29,10 +25,6 @@ class UserDB(Base):
 
     role = Column(String)
 
-
-# ==========================
-# CHARGER TABLE
-# ==========================
 
 class ChargerDB(Base):
 
@@ -57,10 +49,6 @@ class ChargerDB(Base):
     )
 
 
-# ==========================
-# DISPENSER TABLE
-# ==========================
-
 class DispenserDB(Base):
 
     __tablename__ = "dispensers"
@@ -83,10 +71,6 @@ class DispenserDB(Base):
         back_populates="dispensers"
     )
 
-
-# ==========================
-# INIT DATABASE
-# ==========================
 
 def init_db():
 
