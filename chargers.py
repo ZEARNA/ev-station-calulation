@@ -11,6 +11,27 @@ def charger_data_page():
     chargers = db.query(ChargerDB).all()
 
     # -----------------------------
+    # GRID STYLE
+    # -----------------------------
+
+    st.markdown(
+        """
+        <style>
+        .grid-row {
+            border-bottom:1px solid #ddd;
+            padding:6px 0;
+        }
+        .grid-header {
+            font-weight:bold;
+            border-bottom:2px solid #999;
+            padding:6px 0;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # -----------------------------
     # ADD BUTTON
     # -----------------------------
 
@@ -27,15 +48,13 @@ def charger_data_page():
 
     h1, h2, h3, h4, h5, h6, h7 = st.columns(7)
 
-    h1.write("Name")
-    h2.write("Type")
-    h3.write("Power kW")
-    h4.write("Current A")
-    h5.write("Price")
-    h6.write("Dispenser")
-    h7.write("Action")
-
-    st.divider()
+    h1.markdown('<div class="grid-header">Name</div>', unsafe_allow_html=True)
+    h2.markdown('<div class="grid-header">Type</div>', unsafe_allow_html=True)
+    h3.markdown('<div class="grid-header">Power kW</div>', unsafe_allow_html=True)
+    h4.markdown('<div class="grid-header">Current A</div>', unsafe_allow_html=True)
+    h5.markdown('<div class="grid-header">Price</div>', unsafe_allow_html=True)
+    h6.markdown('<div class="grid-header">Dispenser</div>', unsafe_allow_html=True)
+    h7.markdown('<div class="grid-header">Action</div>', unsafe_allow_html=True)
 
     # -----------------------------
     # TABLE ROWS
@@ -45,12 +64,12 @@ def charger_data_page():
 
         c1, c2, c3, c4, c5, c6, c7 = st.columns(7)
 
-        c1.write(c.name)
-        c2.write(c.type)
-        c3.write(c.power_kw)
-        c4.write(c.current)
-        c5.write(c.price)
-        c6.write(c.dispenser_price)
+        c1.markdown(f'<div class="grid-row">{c.name}</div>', unsafe_allow_html=True)
+        c2.markdown(f'<div class="grid-row">{c.type}</div>', unsafe_allow_html=True)
+        c3.markdown(f'<div class="grid-row">{c.power_kw}</div>', unsafe_allow_html=True)
+        c4.markdown(f'<div class="grid-row">{c.current}</div>', unsafe_allow_html=True)
+        c5.markdown(f'<div class="grid-row">{c.price}</div>', unsafe_allow_html=True)
+        c6.markdown(f'<div class="grid-row">{c.dispenser_price}</div>', unsafe_allow_html=True)
 
         if c7.button("Edit", key=f"edit_{c.id}"):
 
@@ -123,10 +142,6 @@ def charger_data_page():
 
         col1, col2 = st.columns(2)
 
-        # -----------------------------
-        # UPDATE
-        # -----------------------------
-
         with col1:
 
             if st.button("Update Charger"):
@@ -145,10 +160,6 @@ def charger_data_page():
                 st.session_state.mode = None
                 st.rerun()
 
-        # -----------------------------
-        # DELETE BUTTON
-        # -----------------------------
-
         with col2:
 
             if st.button("Delete Charger"):
@@ -166,12 +177,12 @@ def charger_data_page():
 
             with c1:
 
-                if st.button("✅ Confirm Delete"):
+                if st.button("Confirm Delete"):
 
                     db.delete(charger)
                     db.commit()
 
-                    st.success("Charger deleted")
+                    st.success("Deleted")
 
                     st.session_state.confirm_delete = False
                     st.session_state.mode = None
@@ -180,7 +191,7 @@ def charger_data_page():
 
             with c2:
 
-                if st.button("❌ Cancel"):
+                if st.button("Cancel"):
 
                     st.session_state.confirm_delete = False
                     st.rerun()
