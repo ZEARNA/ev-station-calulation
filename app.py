@@ -1,46 +1,24 @@
 """
-EV Station Calculation (ev-station-calulation) Dashboard / SaaS‑Ready Engine (Dependency‑Safe Version)
+EV Station Calculation (ev-station-calulation)
 
-This version fixes crashes in restricted environments where packages like
-FastAPI, Pydantic, SQLAlchemy, or Streamlit may NOT be installed.
+Features
+- Login system
+- Admin can create users
+- Admin can create charger models with price
+- Users can calculate EV charging station ROI
+- Works on Streamlit Cloud
 
-The program now runs in **three modes automatically** depending on what
-libraries are available:
-
-1️⃣ Full SaaS Mode
-   FastAPI + Streamlit + SQLite
-
-2️⃣ Dashboard Mode
-   Streamlit only
-
-3️⃣ CLI Mode (always works)
-   Runs calculation demo in terminal
-
-Install optional packages for full features:
-
-pip install fastapi uvicorn streamlit pandas sqlalchemy pydantic
-
-Run dashboard:
-
-streamlit run app.py
-
-Run API (if FastAPI installed):
-
-uvicorn app:api --reload
+Default admin login
+username: admin
+password: admin
 """
+
+from pathlib import Path
+import hashlib
 
 # =================================================
 # SAFE IMPORTS
 # =================================================
-
-from pathlib import Path
-
-# Optional libraries
-try:
-    from fastapi import FastAPI
-    FASTAPI_AVAILABLE = True
-except ModuleNotFoundError:
-    FASTAPI_AVAILABLE = False
 
 try:
     import streamlit as st
@@ -49,17 +27,6 @@ try:
 except ModuleNotFoundError:
     STREAMLIT_AVAILABLE = False
 
-# Pydantic fallback
-try:
-    from pydantic import BaseModel
-except ModuleNotFoundError:
-
-    class BaseModel:
-        def __init__(self, **data):
-            for k, v in data.items():
-                setattr(self, k, v)
-
-# SQLAlchemy fallback
 try:
     from sqlalchemy import create_engine, Column, Integer, Float, String
     from sqlalchemy.orm import declarative_base, sessionmaker
@@ -69,7 +36,7 @@ except ModuleNotFoundError:
 
 
 # =================================================
-# DATABASE SETUP (OPTIONAL)
+# DATABASE
 # =================================================
 
 if SQLALCHEMY_AVAILABLE:
@@ -82,6 +49,16 @@ if SQLALCHEMY_AVAILABLE:
 
     Base = declarative_base()
 
+
+    class UserDB(Base):
+        __tablename__ = "users"
+
+        id = Column(Integer, primary_key=True)
+        username = Column(String)
+        password = Column(String)
+        role = Column(String)
+
+
     class ChargerDB(Base):
         __tablename__ = "chargers"
 
@@ -93,278 +70,196 @@ if SQLALCHEMY_AVAILABLE:
         price = Column(Float)
         dispenser_price = Column(Float)
 
+
     Base.metadata.create_all(engine)
 
-else:
 
-    ChargerDB = None
-    SessionLocal = None
+    # create default admin if not exists
+    db = SessionLocal()
 
+    if db.query(UserDB).count() == 0:
 
-# =================================================
-# DATA MODELS
-# =================================================
+        admin = UserDB(
+            username="admin",
+            password=hashlib.sha256("admin".encode()).hexdigest(),
+            role="admin",
+        )
 
-class ChargerModel(BaseModel):
+        db.add(admin)
+        db.commit()
 
-    name: str
-
-    type: str
-
-    power_kw: float
-
-    current: float
-
-    price: float
-
-    dispenser_price: float = 0
-
-
-class ProjectInput(BaseModel):
-
-    model: ChargerModel
-
-    qty: int
-
-    dispenser_qty: int
-
-    location: str
-
-    utilization: float
-
-    charge_price: float
-
-    electricity_cost: float
-
-    transformer_cost: float
-
-    cable_cost: float
-
-    land_rent_year: float
-
-    om_year: float
-
-    demand_charge_rate: float
-
-    distance_m: float
+    db.close()
 
 
 # =================================================
-# FINANCIAL FUNCTIONS
+# UTILS
 # =================================================
 
 
-def calculate_irr(cashflows, guess=0.1, iterations=100):
-
-    rate = guess
-
-    for _ in range(iterations):
-
-        npv = 0
-
-        derivative = 0
-
-        for t, cf in enumerate(cashflows):
-
-            npv += cf / ((1 + rate) ** t)
-
-            derivative -= t * cf / ((1 + rate) ** (t + 1))
-
-        if derivative == 0:
-
-            break
-
-        rate = rate - npv / derivative
-
-    return rate
+def hash_password(p):
+    return hashlib.sha256(p.encode()).hexdigest()
 
 
 # =================================================
-# ENGINEERING ESTIMATION
+# CALCULATION ENGINE
 # =================================================
 
 
-def estimate_transformer_kva(total_power_kw):
+def calculate_project(power, price, qty, utilization, charge_price, electricity_cost):
 
-    kva = total_power_kw / 0.9
+    energy_day = power * qty * utilization * 24
 
-    sizes = [250, 400, 630, 800, 1000, 1250, 1600]
+    revenue_day = energy_day * charge_price
 
-    for s in sizes:
+    electricity_day = energy_day * electricity_cost
 
-        if kva <= s:
+    annual_profit = (revenue_day - electricity_day) * 365
 
-            return s
+    project_cost = price * qty
 
-    return sizes[-1]
-
-
-
-def estimate_cable_cost(distance_m, cost_per_m=800):
-
-    return distance_m * cost_per_m
-
-
-
-def estimate_mdb_cost(total_current):
-
-    if total_current <= 400:
-
-        return 120000
-
-    if total_current <= 800:
-
-        return 250000
-
-    return 350000
-
-
-# =================================================
-# CORE CALCULATION
-# =================================================
-
-
-def calculate_project(input_data):
-
-    model = input_data.model
-
-    qty = input_data.qty
-
-    total_current = model.current * qty
-
-    total_power = model.power_kw * qty
-
-    transformer_kva = estimate_transformer_kva(total_power)
-
-    cable_est = estimate_cable_cost(input_data.distance_m)
-
-    mdb_cost = estimate_mdb_cost(total_current)
-
-    if input_data.location == "MEA" and total_current <= 400:
-
-        infrastructure_cost = input_data.cable_cost + mdb_cost
-
-        meter_type = "Free Meter"
-
-    else:
-
-        infrastructure_cost = input_data.transformer_cost + input_data.cable_cost + mdb_cost
-
-        meter_type = "Transformer Required"
-
-    if model.type == "Standalone":
-
-        equipment_cost = model.price * qty
-
-    else:
-
-        equipment_cost = model.price * qty + model.dispenser_price * input_data.dispenser_qty
-
-    energy_day = total_power * input_data.utilization * 24
-
-    revenue_day = energy_day * input_data.charge_price
-
-    electricity_day = energy_day * input_data.electricity_cost
-
-    demand_charge_month = total_power * input_data.demand_charge_rate
-
-    demand_charge_year = demand_charge_month * 12
-
-    profit_day = revenue_day - electricity_day
-
-    annual_profit = profit_day * 365
-
-    annual_profit -= demand_charge_year
-
-    annual_profit -= input_data.land_rent_year
-
-    annual_profit -= input_data.om_year
-
-    total_project_cost = equipment_cost + infrastructure_cost + cable_est
-
-    roi_years = None
+    roi = None
 
     if annual_profit > 0:
+        roi = project_cost / annual_profit
 
-        roi_years = total_project_cost / annual_profit
-
-    cashflows = [-total_project_cost] + [annual_profit] * 10
-
-    irr = calculate_irr(cashflows)
-
-    cumulative_profit = []
-
-    running = 0
-
-    for _ in range(10):
-
-        running += annual_profit
-
-        cumulative_profit.append(running)
-
-    return {
-
-        "total_current": total_current,
-
-        "transformer_kva": transformer_kva,
-
-        "meter_type": meter_type,
-
-        "equipment_cost": equipment_cost,
-
-        "total_project_cost": total_project_cost,
-
-        "annual_profit": annual_profit,
-
-        "roi_years": roi_years,
-
-        "irr": irr,
-
-        "cumulative_profit": cumulative_profit
-
-    }
+    return project_cost, annual_profit, roi
 
 
 # =================================================
-# FASTAPI BACKEND (ONLY IF AVAILABLE)
-# =================================================
-
-if FASTAPI_AVAILABLE:
-
-    api = FastAPI(title="EV Station Calculation API")
-
-    @api.get("/")
-
-    def root():
-
-        return {"service": "EV Station Calculation API"}
-
-
-    @api.post("/calculate")
-
-    def api_calculate(input_data: ProjectInput):
-
-        return calculate_project(input_data)
-
-
-# =================================================
-# STREAMLIT DASHBOARD (ONLY IF AVAILABLE)
+# LOGIN SYSTEM
 # =================================================
 
 
-def streamlit_app():
+def login_screen():
 
-    st.title("⚡ EV Station Calculation Dashboard")
+    st.title("EV Station Calculation Login")
 
-    charger_type = st.selectbox("Charger Type", ["Standalone", "Split"])
+    username = st.text_input("Username")
 
-    power = st.number_input("Power kW", value=120)
+    password = st.text_input("Password", type="password")
 
-    current = st.number_input("Current A", value=200)
+    if st.button("Login"):
 
-    price = st.number_input("Charger Price", value=500000)
+        db = SessionLocal()
 
-    qty = st.number_input("Chargers", value=2)
+        user = (
+            db.query(UserDB)
+            .filter(
+                UserDB.username == username,
+                UserDB.password == hash_password(password),
+            )
+            .first()
+        )
+
+        db.close()
+
+        if user:
+
+            st.session_state.user = username
+            st.session_state.role = user.role
+
+            st.rerun()
+
+        else:
+
+            st.error("Invalid login")
+
+
+# =================================================
+# ADMIN PANEL
+# =================================================
+
+
+def admin_panel():
+
+    st.header("Admin Panel")
+
+    db = SessionLocal()
+
+    tab1, tab2 = st.tabs(["Create User", "Create Charger"])
+
+    with tab1:
+
+        st.subheader("Create User")
+
+        u = st.text_input("Username")
+
+        p = st.text_input("Password")
+
+        role = st.selectbox("Role", ["user", "admin"])
+
+        if st.button("Create User"):
+
+            user = UserDB(
+                username=u,
+                password=hash_password(p),
+                role=role,
+            )
+
+            db.add(user)
+            db.commit()
+
+            st.success("User created")
+
+    with tab2:
+
+        st.subheader("Create Charger")
+
+        name = st.text_input("Name")
+
+        ctype = st.selectbox("Type", ["Standalone", "Split"])
+
+        power = st.number_input("Power kW", value=120)
+
+        current = st.number_input("Current A", value=200)
+
+        price = st.number_input("Price", value=500000)
+
+        dispenser = st.number_input("Dispenser Price", value=300000)
+
+        if st.button("Create Charger"):
+
+            c = ChargerDB(
+                name=name,
+                type=ctype,
+                power_kw=power,
+                current=current,
+                price=price,
+                dispenser_price=dispenser,
+            )
+
+            db.add(c)
+            db.commit()
+
+            st.success("Charger created")
+
+    db.close()
+
+
+# =================================================
+# USER DASHBOARD
+# =================================================
+
+
+def user_dashboard():
+
+    st.header("EV Station ROI Calculator")
+
+    db = SessionLocal()
+
+    chargers = db.query(ChargerDB).all()
+
+    if len(chargers) == 0:
+        st.warning("No charger models created by admin")
+        return
+
+    charger_names = [c.name for c in chargers]
+
+    selected = st.selectbox("Charger", charger_names)
+
+    charger = next(c for c in chargers if c.name == selected)
+
+    qty = st.number_input("Number of Chargers", value=2)
 
     utilization = st.slider("Utilization %", 0, 100, 20) / 100
 
@@ -374,182 +269,65 @@ def streamlit_app():
 
     if st.button("Calculate"):
 
-        model = ChargerModel(
-
-            name="Custom",
-
-            type=charger_type,
-
-            power_kw=power,
-
-            current=current,
-
-            price=price,
-
-            dispenser_price=300000
-
+        cost, profit, roi = calculate_project(
+            charger.power_kw,
+            charger.price,
+            qty,
+            utilization,
+            charge_price,
+            electricity_cost,
         )
 
-        payload = ProjectInput(
+        st.metric("Project Cost", f"{cost:,.0f} THB")
 
-            model=model,
+        st.metric("Annual Profit", f"{profit:,.0f} THB")
 
-            qty=qty,
+        if roi:
+            st.metric("ROI Years", f"{roi:.2f}")
 
-            dispenser_qty=6 if charger_type == "Split" else 0,
-
-            location="MEA",
-
-            utilization=utilization,
-
-            charge_price=charge_price,
-
-            electricity_cost=electricity_cost,
-
-            transformer_cost=450000,
-
-            cable_cost=200000,
-
-            land_rent_year=200000,
-
-            om_year=50000,
-
-            demand_charge_rate=200,
-
-            distance_m=80
-
-        )
-
-        result = calculate_project(payload)
-
-        st.metric("Project Cost", f"{result['total_project_cost']:,.0f} THB")
-
-        st.metric("Annual Profit", f"{result['annual_profit']:,.0f} THB")
-
-        st.metric("IRR", f"{result['irr']*100:.1f}%")
-
-        st.line_chart(result["cumulative_profit"])
+    db.close()
 
 
 # =================================================
-# TESTS
+# MAIN STREAMLIT APP
 # =================================================
 
 
-def _test_transformer():
+def streamlit_app():
 
-    assert estimate_transformer_kva(200) >= 250
+    if "user" not in st.session_state:
+        login_screen()
+        return
 
+    st.sidebar.write(f"Logged in as: {st.session_state.user}")
 
+    if st.sidebar.button("Logout"):
+        del st.session_state.user
+        del st.session_state.role
+        st.rerun()
 
-def _test_cable():
+    if st.session_state.role == "admin":
 
-    assert estimate_cable_cost(100) == 80000
+        page = st.sidebar.selectbox("Menu", ["Dashboard", "Admin"])
 
+        if page == "Admin":
+            admin_panel()
+        else:
+            user_dashboard()
 
+    else:
 
-def _test_calculation():
-
-    model = ChargerModel(
-
-        name="Test",
-
-        type="Standalone",
-
-        power_kw=120,
-
-        current=200,
-
-        price=500000,
-
-        dispenser_price=0
-
-    )
-
-    payload = ProjectInput(
-
-        model=model,
-
-        qty=2,
-
-        dispenser_qty=0,
-
-        location="MEA",
-
-        utilization=0.2,
-
-        charge_price=8,
-
-        electricity_cost=4,
-
-        transformer_cost=450000,
-
-        cable_cost=200000,
-
-        land_rent_year=200000,
-
-        om_year=50000,
-
-        demand_charge_rate=200,
-
-        distance_m=80
-
-    )
-
-    result = calculate_project(payload)
-
-    assert result["total_project_cost"] > 0
+        user_dashboard()
 
 
 # =================================================
-# ENTRY (Streamlit Cloud compatible)
+# RUN APP
 # =================================================
-
-# Streamlit Cloud does NOT run the script through the
-# usual `if __name__ == "__main__"` path. Therefore we
-# must start the dashboard directly when Streamlit is
-# available.
 
 if STREAMLIT_AVAILABLE:
-    # Run basic tests once (safe, very fast)
-    try:
-        _test_transformer()
-        _test_cable()
-        _test_calculation()
-    except Exception:
-        pass
 
-    # Launch dashboard
     streamlit_app()
 
 else:
 
-    # CLI fallback when Streamlit is not installed
-    print("Running CLI demo...\n")
-
-    demo_model = ChargerModel(
-        name="Demo",
-        type="Standalone",
-        power_kw=120,
-        current=200,
-        price=500000,
-        dispenser_price=0
-    )
-
-    demo = ProjectInput(
-        model=demo_model,
-        qty=2,
-        dispenser_qty=0,
-        location="MEA",
-        utilization=0.2,
-        charge_price=8,
-        electricity_cost=4,
-        transformer_cost=450000,
-        cable_cost=200000,
-        land_rent_year=200000,
-        om_year=50000,
-        demand_charge_rate=200,
-        distance_m=80
-    )
-
-    print(calculate_project(demo))
+    print("Install streamlit to run the dashboard")
