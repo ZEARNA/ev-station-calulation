@@ -39,9 +39,7 @@ class DispenserDB(Base):
     charger_id = Column(Integer, ForeignKey("chargers.id"))
 
     type = Column(String)
-
     connectors = Column(Integer)
-
     amp_per_connector = Column(Float)
 
     charger = relationship("ChargerDB", back_populates="dispensers")
