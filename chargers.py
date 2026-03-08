@@ -7,17 +7,21 @@ def charger_data_page():
 
     db = SessionLocal()
 
-    # -----------------------------
-    # HEADER + ADD BUTTON (TOP RIGHT)
-    # -----------------------------
+    # ---------------------
+    # HEADER + ADD BUTTON
+    # ---------------------
 
-    left, right = st.columns([8,2])
+    col1, col2 = st.columns([8, 2])
 
-    with left:
+    with col1:
         st.header("Charger Database")
 
-    with right:
+    with col2:
         add = st.button("➕ Add Charger", use_container_width=True)
+
+    # ---------------------
+    # LOAD DATA
+    # ---------------------
 
     chargers = db.query(ChargerDB).all()
 
@@ -39,14 +43,14 @@ def charger_data_page():
 
     df = pd.DataFrame(data)
 
-    # -----------------------------
+    # ---------------------
     # TABLE
-    # -----------------------------
+    # ---------------------
 
     edited_df = st.data_editor(
         df,
         use_container_width=True,
-        num_rows="dynamic",
+        num_rows="dynamic"
     )
 
     st.divider()
@@ -59,13 +63,13 @@ def charger_data_page():
     with col2:
         delete = st.button("🗑 Delete Selected")
 
-    # -----------------------------
+    # ---------------------
     # ADD CHARGER
-    # -----------------------------
+    # ---------------------
 
     if add:
 
-        new = ChargerDB(
+        new_charger = ChargerDB(
             name="New Charger",
             type="Standalone",
             power_kw=120,
@@ -74,16 +78,15 @@ def charger_data_page():
             dispenser_price=300000,
         )
 
-        db.add(new)
+        db.add(new_charger)
         db.commit()
 
         st.success("New charger added")
-
         st.rerun()
 
-    # -----------------------------
+    # ---------------------
     # SAVE EDIT
-    # -----------------------------
+    # ---------------------
 
     if save:
 
@@ -94,7 +97,6 @@ def charger_data_page():
             ).first()
 
             if charger:
-
                 charger.name = row["Name"]
                 charger.type = row["Type"]
                 charger.power_kw = row["Power kW"]
@@ -105,12 +107,11 @@ def charger_data_page():
         db.commit()
 
         st.success("Changes saved")
-
         st.rerun()
 
-    # -----------------------------
+    # ---------------------
     # DELETE
-    # -----------------------------
+    # ---------------------
 
     if delete:
 
@@ -128,90 +129,6 @@ def charger_data_page():
         db.commit()
 
         st.success("Deleted selected chargers")
-
         st.rerun()
-
-    db.close()
-    else:
-        st.info("No chargers in database")
-
-    # -----------------------------
-    # ADMIN ONLY SECTION
-    # -----------------------------
-
-    if st.session_state.role != "admin":
-        db.close()
-        return
-
-    st.divider()
-
-    # -----------------------------
-    # ADD CHARGER
-    # -----------------------------
-
-    st.subheader("Add Charger")
-
-    name = st.text_input("Name")
-    ctype = st.selectbox("Type", ["Standalone", "Split"])
-    power = st.number_input("Power kW", value=120)
-    current = st.number_input("Current A", value=200)
-    price = st.number_input("Price", value=500000)
-    dispenser = st.number_input("Dispenser Price", value=300000)
-
-    if st.button("Add Charger"):
-
-        charger = ChargerDB(
-            name=name,
-            type=ctype,
-            power_kw=power,
-            current=current,
-            price=price,
-            dispenser_price=dispenser,
-        )
-
-        db.add(charger)
-        db.commit()
-
-        st.success("Charger added")
-
-        st.rerun()
-
-    st.divider()
-
-    # -----------------------------
-    # EDIT / DELETE
-    # -----------------------------
-
-    st.subheader("Edit / Delete Charger")
-
-    chargers = db.query(ChargerDB).all()
-
-    if len(chargers) > 0:
-
-        names = [c.name for c in chargers]
-
-        selected = st.selectbox("Select Charger", names)
-
-        charger = next(c for c in chargers if c.name == selected)
-
-        new_price = st.number_input(
-            "Edit Price", value=float(charger.price)
-        )
-
-        if st.button("Update Charger"):
-
-            charger.price = new_price
-            db.commit()
-
-            st.success("Updated")
-
-        if st.button("Delete Charger"):
-
-            db.delete(charger)
-            db.commit()
-
-            st.success("Deleted")
-
-            st.rerun()
 
     db.close()
