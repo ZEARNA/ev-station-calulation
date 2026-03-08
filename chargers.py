@@ -14,379 +14,239 @@ def charger_data_page():
 
     st.header("Infrastructure Database")
 
-    tab1, tab2, tab3, tab4 = st.tabs(["Chargers", "Dispensers", "Transformers", "Cables"])
+    tab1, tab2, tab3, tab4 = st.tabs(
+        ["Chargers", "Dispensers", "Transformers", "Cables"]
+    )
 
-    # =====================================================
-    # CHARGER DATABASE
-    # =====================================================
+    # ==========================
+    # CHARGERS
+    # ==========================
 
     with tab1:
 
+        st.subheader("Chargers")
+
         chargers = db.query(ChargerDB).all()
 
-        col1, col2 = st.columns([8, 2])
-
-        with col2:
-            if st.button("➕ Add Charger", key="btn_add_charger"):
-                st.session_state.add_charger = True
-
-        # TABLE HEADER
-        h1, h2, h3, h4, h5 = st.columns(5)
+        h1, h2, h3, h4 = st.columns(4)
 
         h1.write("Name")
         h2.write("Type")
         h3.write("Power kW")
         h4.write("Price")
-        h5.write("Action")
 
         st.divider()
 
         for c in chargers:
 
-            c1, c2, c3, c4, c5 = st.columns(5)
+            c1, c2, c3, c4 = st.columns(4)
 
             c1.write(c.name)
             c2.write(c.type)
             c3.write(c.power_kw)
             c4.write(c.price)
 
-            edit_col, del_col = c5.columns(2)
+        st.divider()
 
-            if edit_col.button("Edit", key=f"edit_charger_{c.id}"):
-                st.session_state.edit_charger = c.id
+        if st.button("➕ Add Charger"):
 
-            if del_col.button("Delete", key=f"delete_charger_{c.id}"):
-
-                db.delete(c)
-                db.commit()
-
-                st.rerun()
-
-        # ---------------- ADD CHARGER ----------------
+            st.session_state.add_charger = True
 
         if st.session_state.get("add_charger"):
 
-            st.subheader("Add Charger")
+            name = st.text_input("Name")
+            ctype = st.selectbox("Type", ["Standalone", "Split"])
+            power = st.number_input("Power kW", value=120)
+            price = st.number_input("Price", value=500000)
+            max_conn = st.number_input("Max connectors", value=4)
 
-            name = st.text_input("Name", key="add_charger_name")
-
-            ctype = st.selectbox(
-                "Type",
-                ["Standalone", "Split"],
-                key="add_charger_type",
-            )
-
-            power = st.number_input(
-                "Power kW",
-                value=120,
-                key="add_charger_power",
-            )
-
-            price = st.number_input(
-                "Price",
-                value=500000,
-                key="add_charger_price",
-            )
-
-            max_conn = st.number_input(
-                "Max connectors per power unit",
-                value=8,
-                key="add_charger_max_conn",
-            )
-
-            col1, col2 = st.columns(2)
-
-            if col1.button("Save Charger", key="save_charger"):
+            if st.button("Save Charger"):
 
                 charger = ChargerDB(
                     name=name,
                     type=ctype,
                     power_kw=power,
                     price=price,
-                    max_connectors=max_conn,
+                    max_connectors=max_conn
                 )
 
                 db.add(charger)
                 db.commit()
 
                 st.session_state.add_charger = False
-
                 st.rerun()
 
-            if col2.button("Cancel", key="cancel_add_charger"):
-
-                st.session_state.add_charger = False
-                st.rerun()
-
-        # ---------------- EDIT CHARGER ----------------
-
-        if "edit_charger" in st.session_state:
-
-            charger = db.query(ChargerDB).filter(
-                ChargerDB.id == st.session_state.edit_charger
-            ).first()
-
-            st.subheader("Edit Charger")
-
-            name = st.text_input(
-                "Name",
-                value=charger.name,
-                key="edit_charger_name",
-            )
-
-            ctype = st.selectbox(
-                "Type",
-                ["Standalone", "Split"],
-                index=0 if charger.type == "Standalone" else 1,
-                key="edit_charger_type",
-            )
-
-            power = st.number_input(
-                "Power kW",
-                value=charger.power_kw,
-                key="edit_charger_power",
-            )
-
-            price = st.number_input(
-                "Price",
-                value=charger.price,
-                key="edit_charger_price",
-            )
-
-            max_conn = st.number_input(
-                "Max connectors per power unit",
-                value=charger.max_connectors,
-                key="edit_charger_max_conn",
-            )
-
-            col1, col2 = st.columns(2)
-
-            if col1.button("Update Charger", key="update_charger"):
-
-                charger.name = name
-                charger.type = ctype
-                charger.power_kw = power
-                charger.price = price
-                charger.max_connectors = max_conn
-
-                db.commit()
-
-                del st.session_state.edit_charger
-
-                st.rerun()
-
-            if col2.button("Cancel Edit", key="cancel_edit_charger"):
-
-                del st.session_state.edit_charger
-                st.rerun()
-
-    # =====================================================
-    # DISPENSER DATABASE
-    # =====================================================
+    # ==========================
+    # DISPENSERS
+    # ==========================
 
     with tab2:
+
+        st.subheader("Dispensers")
 
         dispensers = db.query(DispenserDB).all()
         chargers = db.query(ChargerDB).all()
 
-        charger_names = {c.id: c.name for c in chargers}
+        charger_map = {c.id: c.name for c in chargers}
 
-        col1, col2 = st.columns([8, 2])
-
-        with col2:
-            if st.button("➕ Add Dispenser", key="btn_add_disp"):
-                st.session_state.add_disp = True
-
-        # TABLE HEADER
-        h1, h2, h3, h4, h5 = st.columns(5)
+        h1, h2, h3, h4 = st.columns(4)
 
         h1.write("Charger")
         h2.write("Type")
         h3.write("Connectors")
         h4.write("Amp")
-        h5.write("Action")
 
         st.divider()
 
         for d in dispensers:
 
-            c1, c2, c3, c4, c5 = st.columns(5)
+            c1, c2, c3, c4 = st.columns(4)
 
-            c1.write(charger_names.get(d.charger_id, "Unknown"))
+            c1.write(charger_map.get(d.charger_id))
             c2.write(d.type)
             c3.write(d.connectors)
             c4.write(d.amp_per_connector)
 
-            edit_col, del_col = c5.columns(2)
+        st.divider()
 
-            if edit_col.button("Edit", key=f"edit_disp_{d.id}"):
+        if st.button("➕ Add Dispenser"):
 
-                st.session_state.edit_disp = d.id
-
-            if del_col.button("Delete", key=f"delete_disp_{d.id}"):
-
-                db.delete(d)
-                db.commit()
-
-                st.rerun()
-
-        # ---------------- ADD DISPENSER ----------------
+            st.session_state.add_disp = True
 
         if st.session_state.get("add_disp"):
-
-            st.subheader("Add Dispenser")
 
             charger_select = st.selectbox(
                 "Compatible Charger",
                 chargers,
-                format_func=lambda x: x.name,
-                key="add_disp_charger",
+                format_func=lambda x: x.name
             )
 
             d_type = st.selectbox(
                 "Type",
-                ["Liquid", "Boost"],
-                key="add_disp_type",
+                ["Liquid", "Boost"]
             )
 
-            connectors = st.number_input(
-                "Connectors",
-                value=2,
-                key="add_disp_conn",
-            )
+            connectors = st.number_input("Connectors", value=2)
 
-            amp = st.number_input(
-                "Amp per connector",
-                value=250,
-                key="add_disp_amp",
-            )
+            amp = st.number_input("Amp per connector", value=250)
 
-            col1, col2 = st.columns(2)
-
-            if col1.button("Save Dispenser", key="save_disp"):
+            if st.button("Save Dispenser"):
 
                 dis = DispenserDB(
                     charger_id=charger_select.id,
                     type=d_type,
                     connectors=connectors,
-                    amp_per_connector=amp,
+                    amp_per_connector=amp
                 )
 
                 db.add(dis)
                 db.commit()
 
                 st.session_state.add_disp = False
-
                 st.rerun()
 
-            if col2.button("Cancel", key="cancel_disp"):
+    # ==========================
+    # TRANSFORMERS
+    # ==========================
 
-                st.session_state.add_disp = False
+    with tab3:
+
+        st.subheader("Transformers")
+
+        transformers = db.query(TransformerDB).all()
+
+        h1, h2, h3 = st.columns(3)
+
+        h1.write("Brand")
+        h2.write("kVA")
+        h3.write("Price")
+
+        st.divider()
+
+        for t in transformers:
+
+            c1, c2, c3 = st.columns(3)
+
+            c1.write(t.brand)
+            c2.write(t.kva)
+            c3.write(t.price)
+
+        st.divider()
+
+        if st.button("➕ Add Transformer"):
+
+            st.session_state.add_transformer = True
+
+        if st.session_state.get("add_transformer"):
+
+            brand = st.text_input("Brand")
+            kva = st.number_input("kVA", value=1000)
+            price = st.number_input("Price", value=800000)
+
+            if st.button("Save Transformer"):
+
+                transformer = TransformerDB(
+                    brand=brand,
+                    kva=kva,
+                    price=price
+                )
+
+                db.add(transformer)
+                db.commit()
+
+                st.session_state.add_transformer = False
                 st.rerun()
 
-    # =====================================================
-# TRANSFORMER DATABASE
-# =====================================================
+    # ==========================
+    # CABLES
+    # ==========================
 
-with tab3:
+    with tab4:
 
-    st.subheader("Transformers")
+        st.subheader("Cables")
 
-    transformers = db.query(TransformerDB).all()
+        cables = db.query(CableDB).all()
 
-    h1, h2, h3 = st.columns(3)
+        h1, h2, h3 = st.columns(3)
 
-    h1.write("Brand")
-    h2.write("kVA")
-    h3.write("Price")
+        h1.write("Type")
+        h2.write("Size")
+        h3.write("Price / meter")
 
-    st.divider()
+        st.divider()
 
-    for t in transformers:
+        for c in cables:
 
-        c1, c2, c3 = st.columns(3)
+            c1, c2, c3 = st.columns(3)
 
-        c1.write(t.brand)
-        c2.write(t.kva)
-        c3.write(t.price)
+            c1.write(c.type)
+            c2.write(c.size)
+            c3.write(c.price_per_meter)
 
-    st.divider()
+        st.divider()
 
-    if st.button("➕ Add Transformer"):
+        if st.button("➕ Add Cable"):
 
-        st.session_state.add_transformer = True
+            st.session_state.add_cable = True
 
-    if st.session_state.get("add_transformer"):
+        if st.session_state.get("add_cable"):
 
-        brand = st.text_input("Brand")
-        kva = st.number_input("kVA", value=1000)
-        price = st.number_input("Price", value=800000)
+            cable_type = st.text_input("Type")
+            size = st.number_input("Size mm²", value=50)
+            price = st.number_input("Price per meter", value=200)
 
-        if st.button("Save Transformer"):
+            if st.button("Save Cable"):
 
-            transformer = TransformerDB(
-                brand=brand,
-                kva=kva,
-                price=price
-            )
+                cable = CableDB(
+                    type=cable_type,
+                    size=size,
+                    price_per_meter=price
+                )
 
-            db.add(transformer)
-            db.commit()
+                db.add(cable)
+                db.commit()
 
-            st.session_state.add_transformer = False
-            st.rerun()
-
-    # =====================================================
-# CABLE DATABASE
-# =====================================================
-
-with tab4:
-
-    st.subheader("Cables")
-
-    cables = db.query(CableDB).all()
-
-    h1, h2, h3 = st.columns(3)
-
-    h1.write("Type")
-    h2.write("Size")
-    h3.write("Price / meter")
-
-    st.divider()
-
-    for c in cables:
-
-        c1, c2, c3 = st.columns(3)
-
-        c1.write(c.type)
-        c2.write(c.size)
-        c3.write(c.price_per_meter)
-
-    st.divider()
-
-    if st.button("➕ Add Cable"):
-
-        st.session_state.add_cable = True
-
-    if st.session_state.get("add_cable"):
-
-        cable_type = st.text_input("Type")
-        size = st.number_input("Size (mm²)", value=50)
-        price = st.number_input("Price per meter", value=200)
-
-        if st.button("Save Cable"):
-
-            cable = CableDB(
-                type=cable_type,
-                size=size,
-                price_per_meter=price
-            )
-
-            db.add(cable)
-            db.commit()
-
-            st.session_state.add_cable = False
-            st.rerun()
+                st.session_state.add_cable = False
+                st.rerun()
 
     db.close()
-    
