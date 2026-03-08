@@ -284,4 +284,109 @@ def charger_data_page():
                 st.session_state.add_disp = False
                 st.rerun()
 
+    # =====================================================
+# TRANSFORMER DATABASE
+# =====================================================
+
+with tab3:
+
+    st.subheader("Transformers")
+
+    transformers = db.query(TransformerDB).all()
+
+    h1, h2, h3 = st.columns(3)
+
+    h1.write("Brand")
+    h2.write("kVA")
+    h3.write("Price")
+
+    st.divider()
+
+    for t in transformers:
+
+        c1, c2, c3 = st.columns(3)
+
+        c1.write(t.brand)
+        c2.write(t.kva)
+        c3.write(t.price)
+
+    st.divider()
+
+    if st.button("➕ Add Transformer"):
+
+        st.session_state.add_transformer = True
+
+    if st.session_state.get("add_transformer"):
+
+        brand = st.text_input("Brand")
+        kva = st.number_input("kVA", value=1000)
+        price = st.number_input("Price", value=800000)
+
+        if st.button("Save Transformer"):
+
+            transformer = TransformerDB(
+                brand=brand,
+                kva=kva,
+                price=price
+            )
+
+            db.add(transformer)
+            db.commit()
+
+            st.session_state.add_transformer = False
+            st.rerun()
+
+    # =====================================================
+# CABLE DATABASE
+# =====================================================
+
+with tab4:
+
+    st.subheader("Cables")
+
+    cables = db.query(CableDB).all()
+
+    h1, h2, h3 = st.columns(3)
+
+    h1.write("Type")
+    h2.write("Size")
+    h3.write("Price / meter")
+
+    st.divider()
+
+    for c in cables:
+
+        c1, c2, c3 = st.columns(3)
+
+        c1.write(c.type)
+        c2.write(c.size)
+        c3.write(c.price_per_meter)
+
+    st.divider()
+
+    if st.button("➕ Add Cable"):
+
+        st.session_state.add_cable = True
+
+    if st.session_state.get("add_cable"):
+
+        cable_type = st.text_input("Type")
+        size = st.number_input("Size (mm²)", value=50)
+        price = st.number_input("Price per meter", value=200)
+
+        if st.button("Save Cable"):
+
+            cable = CableDB(
+                type=cable_type,
+                size=size,
+                price_per_meter=price
+            )
+
+            db.add(cable)
+            db.commit()
+
+            st.session_state.add_cable = False
+            st.rerun()
+
     db.close()
+    
