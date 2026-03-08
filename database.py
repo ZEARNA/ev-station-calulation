@@ -21,8 +21,10 @@ class ChargerDB(Base):
     __tablename__ = "chargers"
 
     id = Column(Integer, primary_key=True)
+
     name = Column(String)
-    type = Column(String)  # Standalone / Split
+    type = Column(String)
+
     power_kw = Column(Float)
     price = Column(Float)
 
@@ -36,8 +38,10 @@ class DispenserDB(Base):
 
     charger_id = Column(Integer, ForeignKey("chargers.id"))
 
-    type = Column(String)  # Liquid / Boost
+    type = Column(String)
+
     connectors = Column(Integer)
+
     amp_per_connector = Column(Float)
 
     charger = relationship("ChargerDB", back_populates="dispensers")
