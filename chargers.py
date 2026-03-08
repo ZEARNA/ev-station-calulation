@@ -10,9 +10,9 @@ def charger_data_page():
 
     chargers = db.query(ChargerDB).all()
 
-    # --------------------
+    # -----------------------------
     # ADD BUTTON
-    # --------------------
+    # -----------------------------
 
     col1, col2 = st.columns([8,2])
 
@@ -21,9 +21,9 @@ def charger_data_page():
             st.session_state.mode = "add"
             st.rerun()
 
-    # --------------------
+    # -----------------------------
     # TABLE HEADER
-    # --------------------
+    # -----------------------------
 
     h1, h2, h3, h4, h5, h6, h7 = st.columns(7)
 
@@ -37,9 +37,9 @@ def charger_data_page():
 
     st.divider()
 
-    # --------------------
+    # -----------------------------
     # TABLE ROWS
-    # --------------------
+    # -----------------------------
 
     for c in chargers:
 
@@ -58,9 +58,9 @@ def charger_data_page():
             st.session_state.mode = "edit"
             st.rerun()
 
-    # --------------------
+    # -----------------------------
     # ADD CHARGER
-    # --------------------
+    # -----------------------------
 
     if st.session_state.get("mode") == "add":
 
@@ -93,9 +93,9 @@ def charger_data_page():
             st.session_state.mode = None
             st.rerun()
 
-    # --------------------
+    # -----------------------------
     # EDIT CHARGER
-    # --------------------
+    # -----------------------------
 
     if st.session_state.get("mode") == "edit":
 
@@ -107,6 +107,7 @@ def charger_data_page():
         st.subheader(f"Edit Charger : {charger.name}")
 
         name = st.text_input("Name", value=charger.name)
+
         ctype = st.selectbox(
             "Type",
             ["Standalone", "Split"],
@@ -121,6 +122,10 @@ def charger_data_page():
         )
 
         col1, col2 = st.columns(2)
+
+        # -----------------------------
+        # UPDATE
+        # -----------------------------
 
         with col1:
 
@@ -140,16 +145,44 @@ def charger_data_page():
                 st.session_state.mode = None
                 st.rerun()
 
+        # -----------------------------
+        # DELETE BUTTON
+        # -----------------------------
+
         with col2:
 
             if st.button("Delete Charger"):
+                st.session_state.confirm_delete = True
 
-                db.delete(charger)
-                db.commit()
+        # -----------------------------
+        # CONFIRM DELETE
+        # -----------------------------
 
-                st.success("Deleted")
+        if st.session_state.get("confirm_delete"):
 
-                st.session_state.mode = None
-                st.rerun()
+            st.warning("⚠️ Are you sure you want to delete this charger?")
+
+            c1, c2 = st.columns(2)
+
+            with c1:
+
+                if st.button("✅ Confirm Delete"):
+
+                    db.delete(charger)
+                    db.commit()
+
+                    st.success("Charger deleted")
+
+                    st.session_state.confirm_delete = False
+                    st.session_state.mode = None
+
+                    st.rerun()
+
+            with c2:
+
+                if st.button("❌ Cancel"):
+
+                    st.session_state.confirm_delete = False
+                    st.rerun()
 
     db.close()
