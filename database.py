@@ -1,146 +1,77 @@
-from sqlalchemy import create_engine, Column, Integer, Float, String, ForeignKey
-from sqlalchemy.orm import declarative_base, sessionmaker, relationship
-import hashlib
-
-DATABASE_URL = "sqlite:///ev_saas.db"
-
-engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False}
-)
-
-SessionLocal = sessionmaker(bind=engine)
-
-Base = declarative_base()
+import streamlit as st
+from database import SessionLocal, ChargerDB, DispenserDB
+from calculator import calculate_project
 
 
-# ==========================
-# USER TABLE
-# ==========================
+def user_dashboard():
 
-class UserDB(Base):
-
-    __tablename__ = "users"
-
-    id = Column(Integer, primary_key=True)
-
-    username = Column(String, unique=True)
-
-    password = Column(String)
-
-    role = Column(String)
-
-
-# ==========================
-# CHARGER TABLE
-# ==========================
-
-class ChargerDB(Base):
-
-    __tablename__ = "chargers"
-
-    id = Column(Integer, primary_key=True)
-
-    name = Column(String)
-
-    type = Column(String)
-
-    power_kw = Column(Float)
-
-    price = Column(Float)
-
-    max_connectors = Column(Integer)
-
-    dispensers = relationship(
-        "DispenserDB",
-        back_populates="charger",
-        cascade="all, delete"
-    )
-
-
-# ==========================
-# DISPENSER TABLE
-# ==========================
-
-class DispenserDB(Base):
-
-    __tablename__ = "dispensers"
-
-    id = Column(Integer, primary_key=True)
-
-    charger_id = Column(
-        Integer,
-        ForeignKey("chargers.id")
-    )
-
-    type = Column(String)
-
-    connectors = Column(Integer)
-
-    amp_per_connector = Column(Float)
-
-    charger = relationship(
-        "ChargerDB",
-        back_populates="dispensers"
-    )
-
-
-# ==========================
-# TRANSFORMER TABLE
-# ==========================
-
-class TransformerDB(Base):
-
-    __tablename__ = "transformers"
-
-    id = Column(Integer, primary_key=True)
-
-    brand = Column(String)
-
-    kva = Column(Float)
-
-    price = Column(Float)
-
-
-# ==========================
-# CABLE TABLE
-# ==========================
-
-class CableDB(Base):
-
-    __tablename__ = "cables"
-
-    id = Column(Integer, primary_key=True)
-
-    type = Column(String)
-
-    size = Column(Float)
-
-    price_per_meter = Column(Float)
-
-# ==========================
-# INIT DATABASE
-# ==========================
-
-def init_db():
-
-    Base.metadata.create_all(engine)
+    st.header("EV Station ROI Calculator")
 
     db = SessionLocal()
 
-    admin = db.query(UserDB).filter(UserDB.username == "admin").first()
+    chargers = db.query(ChargerDB).all()
 
-    if not admin:
+    if len(chargers) == 0:
+        st.warning("No charger models created")
+        db.close()
+        return
 
-        password = hashlib.sha256("admin".encode()).hexdigest()
+    names = [c.name for c in chargers]
 
-        admin_user = UserDB(
-            username="admin",
-            password=password,
-            role="admin"
+    selected = st.selectbox("Charger", names)
+
+    charger = next(c for c in chargers if c.name == selected)
+
+    dispensers = db.query(DispenserDB).filter(
+        DispenserDB.charger_id == charger.id
+    ).all()
+
+    disp_options = {
+        f"{d.type} | {d.connectors} connectors": d
+        for d in dispensers
+    }
+
+    disp_label = st.selectbox(
+        "Select Dispenser",
+        list(disp_options.keys())
+    )
+
+    disp = disp_options[disp_label]
+
+    disp_count = st.number_input(
+        "Number of Dispensers",
+        min_value=1,
+        value=1
+    )
+
+    qty = st.number_input("Number of Chargers", value=2)
+
+    utilization = st.slider("Utilization %", 0, 100, 20) / 100
+
+    charge_price = st.number_input("Charging Price", value=8.0)
+
+    electricity_cost = st.number_input("Electricity Cost", value=4.0)
+
+    if st.button("Calculate ROI"):
+
+        total_connectors = disp.connectors * disp_count
+
+        power_per_connector = charger.power_kw / total_connectors
+
+        cost, profit, roi = calculate_project(
+            charger.power_kw,
+            charger.price,
+            qty,
+            utilization,
+            charge_price,
+            electricity_cost,
         )
 
-        db.add(admin_user)
-        db.commit()
+        st.metric("Project Cost", f"{cost:,.0f} THB")
+        st.metric("Annual Profit", f"{profit:,.0f} THB")
+        st.metric("Power per Connector", f"{power_per_connector:.1f} kW")
+
+        if roi:
+            st.metric("ROI Years", f"{roi:.2f}")
 
     db.close()
