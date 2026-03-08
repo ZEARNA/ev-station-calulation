@@ -525,8 +525,7 @@ if STREAMLIT_AVAILABLE:
 else:
 
     # CLI fallback when Streamlit is not installed
-    print("Running CLI demo...
-")
+    print("Running CLI demo...\n")
 
     demo_model = ChargerModel(
         name="Demo",
